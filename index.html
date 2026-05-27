@@ -1,0 +1,2124 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permuta de Serviço - CBM</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --brand: #b71c1c;
+            --brand-dark: #8f1414;
+            --ink: #1f2933;
+            --muted: #5f6b7a;
+            --line: #d7dce2;
+            --surface: #ffffff;
+            --page: #eef1f5;
+            --ok: #1b7f4d;
+            --ok-bg: #e8f5ee;
+            --warn: #8a5a00;
+            --warn-bg: #fff7df;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--ink);
+            background: var(--page);
+        }
+
+        .container {
+            width: min(680px, 100%);
+            margin: 0 auto;
+            padding: 18px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(31, 41, 51, 0.08);
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--brand);
+            font-size: 22px;
+            line-height: 1.2;
+        }
+
+        .phase-badge {
+            min-width: 120px;
+            padding: 7px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            background: #f8fafc;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .status {
+            display: none;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .status.is-ok {
+            display: block;
+            color: var(--ok);
+            background: var(--ok-bg);
+            border: 1px solid #bfe7d1;
+        }
+
+        .status.is-warn {
+            display: block;
+            color: var(--warn);
+            background: var(--warn-bg);
+            border: 1px solid #f0dc9a;
+        }
+
+        .section {
+            margin-bottom: 16px;
+            padding: 14px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .section.locked {
+            background: #f8fafc;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+            color: #394553;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0;
+            text-transform: uppercase;
+        }
+
+        label {
+            display: block;
+            margin-top: 14px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="url"],
+        select {
+            width: 100%;
+            min-height: 38px;
+            margin-top: 5px;
+            padding: 8px 10px;
+            border: 1px solid #c6ccd4;
+            border-radius: 4px;
+            color: var(--ink);
+            background: #fff;
+            font-size: 14px;
+        }
+
+        .date-field {
+            max-width: 170px;
+        }
+
+        input:disabled,
+        select:disabled {
+            color: #52606d;
+            background: #edf1f5;
+            opacity: 1;
+        }
+
+        .field-label {
+            margin-top: 18px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .choice-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .choice {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 36px;
+            margin-top: 0;
+            padding: 8px 10px;
+            border: 1px solid #c6ccd4;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .choice input {
+            margin: 0;
+            accent-color: var(--brand);
+        }
+
+        .choice:has(input:disabled) {
+            color: #52606d;
+            background: #edf1f5;
+            cursor: not-allowed;
+        }
+
+        .canvas-container {
+            position: relative;
+            margin-top: 5px;
+            border: 1px dashed #66727f;
+            border-radius: 4px;
+            background: #fbfcfd;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .canvas-container:hover,
+        .canvas-container:focus-visible {
+            border-color: var(--brand);
+            outline: 2px solid rgba(183, 28, 28, 0.12);
+            outline-offset: 2px;
+        }
+
+        .canvas-container.locked {
+            cursor: not-allowed;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 150px;
+            pointer-events: none;
+            touch-action: manipulation;
+        }
+
+        canvas.locked {
+            cursor: not-allowed;
+            opacity: 0.58;
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        button,
+        .whatsapp-btn,
+        .link-btn {
+            min-height: 42px;
+            border: 0;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .clear-btn {
+            min-height: 30px;
+            margin-top: 6px;
+            padding: 5px 10px;
+            border: 1px solid #c6ccd4;
+            color: #394553;
+            background: #f3f5f7;
+            font-size: 12px;
+        }
+
+        .main-btn {
+            color: #fff;
+            background: var(--brand);
+        }
+
+        .main-btn:hover { background: var(--brand-dark); }
+
+        .secondary-btn {
+            border: 1px solid #b7c0cc;
+            color: #273444;
+            background: #f8fafc;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+        .share-zone {
+            display: none;
+            margin-top: 18px;
+            padding: 14px;
+            border: 1px solid #bfe7d1;
+            border-radius: 6px;
+            background: var(--ok-bg);
+        }
+
+        .share-zone h2 {
+            margin: 0 0 8px;
+            color: var(--ok);
+            font-size: 16px;
+        }
+
+        .share-zone p {
+            margin: 0 0 10px;
+            color: #355244;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .share-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .whatsapp-btn,
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .whatsapp-btn { background: #1fa855; }
+        .link-btn { background: #2563eb; }
+
+        .hidden { display: none !important; }
+
+        body.signature-modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        .signature-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            width: var(--signature-vw, 100dvw);
+            height: var(--signature-vh, 100dvh);
+            padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+            background: #111827;
+            overscroll-behavior: contain;
+        }
+
+        .signature-modal-shell {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #fff;
+            touch-action: none;
+        }
+
+        .signature-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--line);
+            background: #f8fafc;
+        }
+
+        .signature-modal-title {
+            min-width: 0;
+            color: #273444;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .signature-toolbar-actions {
+            display: flex;
+            flex: 0 0 auto;
+            gap: 8px;
+        }
+
+        .signature-toolbar-actions button {
+            min-height: 36px;
+            padding: 0 12px;
+            font-size: 13px;
+        }
+
+        .signature-pad-frame {
+            flex: 1;
+            min-height: 0;
+            margin: 10px;
+            border: 1px solid #9aa5b1;
+            border-radius: 6px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        #signature_modal_canvas {
+            width: 100%;
+            height: 100%;
+            min-height: 240px;
+            pointer-events: auto;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .signature-modal.is-portrait .signature-toolbar {
+            padding: 8px 10px;
+        }
+
+        .signature-modal.is-portrait .signature-pad-frame {
+            margin: 8px;
+        }
+
+        .signature-modal.is-portrait #signature_modal_canvas {
+            min-height: 64vh;
+            min-height: 64dvh;
+        }
+
+        @media (max-width: 560px) {
+            body { padding: 10px; }
+            .container { padding: 14px; }
+            .header { display: block; }
+            .phase-badge {
+                width: 100%;
+                margin-top: 10px;
+            }
+            .button-row,
+            .share-actions,
+            .choice-grid {
+                grid-template-columns: 1fr;
+            }
+            .signature-modal {
+                padding: 0;
+            }
+            .signature-modal-shell {
+                border-radius: 0;
+            }
+            .signature-toolbar {
+                flex-wrap: wrap;
+            }
+            .signature-toolbar-actions {
+                width: 100%;
+            }
+            .signature-toolbar-actions button {
+                flex: 1;
+                padding: 0 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="container">
+    <div class="header">
+        <h1>Permuta de Serviço</h1>
+        <div class="phase-badge" id="phase_badge">Solicitante</div>
+    </div>
+
+    <div class="status" id="app_status"></div>
+
+    <section class="section" id="section_documento">
+        <div class="section-title">DATA</div>
+        <input class="date-field" type="date" id="data_documento" aria-label="Data">
+    </section>
+
+    <section class="section" id="section_solicitante">
+        <div class="section-title">Solicitante</div>
+        <label for="nome_solicitante">Nome completo</label>
+        <input type="text" id="nome_solicitante" autocomplete="name" placeholder="Ex: Fulano de Tal">
+
+        <label for="mat_solicitante">Matrícula funcional</label>
+        <input type="text" id="mat_solicitante" inputmode="numeric" placeholder="Ex: 123.456-7">
+
+        <label for="data_solicitante">Data do serviço</label>
+        <input type="date" id="data_solicitante">
+
+        <div class="field-label">Guarnição</div>
+        <div class="choice-grid" role="radiogroup" aria-label="Guarnição">
+            <label class="choice">
+                <input type="radio" name="guarnicao_solicitante" value="guarda">
+                <span>Guarda</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_solicitante" value="salvamento01">
+                <span>Salvamento 01</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_solicitante" value="salvamento05">
+                <span>Salvamento 05</span>
+            </label>
+        </div>
+
+        <div class="field-label">Turno</div>
+        <div class="choice-grid" role="radiogroup" aria-label="Turno">
+            <label class="choice">
+                <input type="radio" name="turno_solicitante" value="a">
+                <span>A</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="turno_solicitante" value="b">
+                <span>B</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="turno_solicitante" value="24h">
+                <span>24h</span>
+            </label>
+        </div>
+
+        <label for="sig_solicitante">Assinatura do solicitante</label>
+        <div class="canvas-container" data-signature-target="sig_solicitante" role="button" tabindex="0">
+            <canvas id="sig_solicitante"></canvas>
+        </div>
+        <button class="clear-btn" type="button" id="clear_solicitante">Limpar assinatura</button>
+    </section>
+
+    <section class="section" id="section_substituido">
+        <div class="section-title">Substituído</div>
+        <label for="nome_substituido">Nome completo</label>
+        <input type="text" id="nome_substituido" autocomplete="name" placeholder="Ex: Ciclano de Tal">
+
+        <label for="mat_substituido">Matrícula funcional</label>
+        <input type="text" id="mat_substituido" inputmode="numeric" placeholder="Ex: 765.432-1">
+
+        <label for="data_substituido">Data do serviço</label>
+        <input type="date" id="data_substituido">
+
+        <div class="field-label">Guarnição</div>
+        <div class="choice-grid" role="radiogroup" aria-label="Guarnição">
+            <label class="choice">
+                <input type="radio" name="guarnicao_substituido" value="guarda">
+                <span>Guarda</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_substituido" value="salvamento01">
+                <span>Salvamento 01</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_substituido" value="salvamento05">
+                <span>Salvamento 05</span>
+            </label>
+        </div>
+
+        <div class="field-label">Turno</div>
+        <div class="choice-grid" role="radiogroup" aria-label="Turno">
+            <label class="choice">
+                <input type="radio" name="turno_substituido" value="a">
+                <span>A</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="turno_substituido" value="b">
+                <span>B</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="turno_substituido" value="24h">
+                <span>24h</span>
+            </label>
+        </div>
+
+        <label for="sig_substituido">Assinatura do substituído</label>
+        <div class="canvas-container" data-signature-target="sig_substituido" role="button" tabindex="0">
+            <canvas id="sig_substituido"></canvas>
+        </div>
+        <button class="clear-btn" type="button" id="clear_substituido">Limpar assinatura</button>
+    </section>
+
+    <section class="section" id="section_autorizador">
+        <div class="section-title">Autorizador</div>
+        <label for="sig_autorizador">Assinatura do autorizador</label>
+        <div class="canvas-container" data-signature-target="sig_autorizador" role="button" tabindex="0">
+            <canvas id="sig_autorizador"></canvas>
+        </div>
+        <button class="clear-btn" type="button" id="clear_autorizador">Limpar assinatura</button>
+    </section>
+
+    <div class="button-row">
+        <button class="secondary-btn" type="button" id="btn_salvar">Compartilhar</button>
+        <button class="main-btn" type="button" id="btn_gerar">Gerar documento</button>
+    </div>
+
+    <section class="share-zone" id="share_zone" aria-live="polite">
+        <h2 id="share_title">Documento pronto</h2>
+        <p id="share_hint"></p>
+        <input class="hidden" type="url" id="share_url" readonly>
+        <div class="share-actions">
+            <button class="secondary-btn hidden" type="button" id="btn_copiar">Copiar link</button>
+            <a id="lnk_download" class="link-btn hidden" href="#" target="_blank" rel="noopener">Abrir PDF</a>
+            <a id="btn_whatsapp" class="whatsapp-btn hidden" href="#" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+        </div>
+    </section>
+</main>
+
+<div class="signature-modal hidden" id="signature_modal" role="dialog" aria-modal="true" aria-labelledby="signature_modal_title">
+    <div class="signature-modal-shell">
+        <div class="signature-toolbar">
+            <div class="signature-modal-title" id="signature_modal_title">Assinatura</div>
+            <div class="signature-toolbar-actions">
+                <button class="clear-btn" type="button" id="signature_modal_clear">Limpar</button>
+                <button class="secondary-btn" type="button" id="signature_modal_cancel">Cancelar</button>
+                <button class="main-btn" type="button" id="signature_modal_save">Concluir</button>
+            </div>
+        </div>
+        <div class="signature-pad-frame">
+            <canvas id="signature_modal_canvas"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
+    const SUPABASE_KEY = "SUA_CHAVE_ANON_PUBLIC";
+    const SUPABASE_BUCKET = "permutas";
+    const PDF_BASE_URLS = [
+        "/Permuta_de_Servico.pdf",
+        "/Permuta_de_Serviço.pdf",
+    ];
+    const PDF_TEMPLATE_SIZE = { width: 843, height: 596 };
+    const PDF_FIELD_FONT_SIZE = 12;
+    const SIGNATURE_INK = "#0645ad";
+    const STATE_PARAM = "p";
+    const COMPACT_STATE_VERSION = "2";
+    const NETLIFY_DRAFT_ENDPOINT = "/.netlify/functions/draft";
+    const SHORT_DRAFT_PREFIX = "/p/";
+    const SIGNATURE_COORD_SCALE = 10000;
+    const LEGACY_SIGNATURE_COORD_SCALE = 1000;
+    const SIGNATURE_MIN_DISTANCE = 28;
+
+    const PHASES = {
+        solicitante: "solicitante",
+        substituido: "substituido",
+        autorizador: "autorizador",
+    };
+
+    const PHASE_LABELS = {
+        solicitante: "Solicitante",
+        substituido: "Substituído",
+        autorizador: "Autorizador",
+    };
+
+    const PHASE_CODES = {
+        solicitante: "s",
+        substituido: "u",
+        autorizador: "a",
+    };
+
+    const PHASE_BY_CODE = {
+        s: PHASES.solicitante,
+        u: PHASES.substituido,
+        a: PHASES.autorizador,
+    };
+
+    const SIGNATURE_LABELS = {
+        sig_solicitante: "Assinatura do solicitante",
+        sig_substituido: "Assinatura do substituído",
+        sig_autorizador: "Assinatura do autorizador",
+    };
+
+    const FIELD_IDS = [
+        "data_documento",
+        "nome_solicitante",
+        "mat_solicitante",
+        "data_solicitante",
+        "guarnicao_solicitante",
+        "turno_solicitante",
+        "nome_substituido",
+        "mat_substituido",
+        "data_substituido",
+        "guarnicao_substituido",
+        "turno_substituido",
+    ];
+
+    const CANVAS_IDS = [
+        "sig_solicitante",
+        "sig_substituido",
+        "sig_autorizador",
+    ];
+
+    const PARAM_ALIASES = {
+        data_documento: ["data_documento", "data_doc", "data_fortaleza"],
+        nome_solicitante: ["nome_solicitante", "nome_sol"],
+        mat_solicitante: ["mat_solicitante", "mat_sol"],
+        data_solicitante: ["data_solicitante", "data_original"],
+        guarnicao_solicitante: ["guarnicao_solicitante", "guarnicao_sol"],
+        turno_solicitante: ["turno_solicitante", "turno_sol"],
+        nome_substituido: ["nome_substituido", "nome_sub"],
+        mat_substituido: ["mat_substituido", "mat_sub"],
+        data_substituido: ["data_substituido", "data_sub"],
+        guarnicao_substituido: ["guarnicao_substituido", "guarnicao_sub"],
+        turno_substituido: ["turno_substituido", "turno_sub"],
+    };
+
+    const SIGNATURE_PARAM_ALIASES = {
+        sig_solicitante: ["sig_solicitante", "assinatura_solicitante", "assinatura_sol", "sig_sol"],
+        sig_substituido: ["sig_substituido", "assinatura_substituido", "assinatura_sub", "sig_sub"],
+        sig_autorizador: ["sig_autorizador", "assinatura_autorizador", "assinatura_aut", "sig_aut"],
+    };
+
+    const FIELD_VALUE_ALIASES = {
+        guarnicao_solicitante: {
+            salvamento1: "salvamento01",
+            5: "salvamento05",
+        },
+        guarnicao_substituido: {
+            salvamento1: "salvamento01",
+            5: "salvamento05",
+        },
+    };
+
+    const PDF_FIELD_BOXES = {
+        data_documento: { x: 393.9, y: 269, width: 102, height: 16.5 },
+        nome_solicitante: { x: 88, y: 176.6, width: 212, height: 15 },
+        mat_solicitante: { x: 405, y: 176.6, width: 141, height: 15 },
+        data_solicitante: { x: 286, y: 197.6, width: 79, height: 15 },
+        nome_substituido: { x: 203, y: 218.6, width: 257, height: 15 },
+        mat_substituido: { x: 577, y: 218.6, width: 98, height: 15 },
+        data_substituido: { x: 704, y: 218.6, width: 68, height: 15 },
+    };
+
+    const PDF_CHECK_BOXES = {
+        guarnicao_solicitante: {
+            guarda: { x: 464, y: 198.8, width: 17, height: 16.5 },
+            salvamento01: { x: 578.5, y: 198.8, width: 17, height: 16.5 },
+            salvamento05: { x: 609, y: 198.8, width: 21, height: 16.5 },
+        },
+        turno_solicitante: {
+            a: { x: 691, y: 198.8, width: 18, height: 16.5 },
+            b: { x: 723.5, y: 198.8, width: 18, height: 16.5 },
+            "24h": { x: 768, y: 198.8, width: 21, height: 16.5 },
+        },
+        guarnicao_substituido: {
+            guarda: { x: 156, y: 240.8, width: 17, height: 16.5 },
+            salvamento01: { x: 270.5, y: 240.8, width: 17, height: 16.5 },
+            salvamento05: { x: 301.5, y: 240.8, width: 21, height: 16.5 },
+        },
+        turno_substituido: {
+            a: { x: 383.5, y: 240.8, width: 18, height: 16.5 },
+            b: { x: 416, y: 240.8, width: 18, height: 16.5 },
+            "24h": { x: 460.5, y: 240.8, width: 21, height: 16.5 },
+        },
+    };
+
+    const supabaseClient = isSupabaseConfigured()
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+        : null;
+
+    let currentPhase = PHASES.solicitante;
+    let lastGeneratedObjectUrl = null;
+    let activeSignatureCanvasId = null;
+    let modalSignatureStrokes = [];
+    let modalDrawing = false;
+    let modalCurrentStroke = [];
+    let savedScrollY = 0;
+    const signatureStrokes = {};
+    const signatureStrokeScales = {};
+
+    window.addEventListener("DOMContentLoaded", inicializarApp);
+
+    async function inicializarApp() {
+        CANVAS_IDS.forEach(setupCanvas);
+        verificarAmbiente();
+
+        document.getElementById("clear_solicitante").addEventListener("click", () => clearCanvas("sig_solicitante"));
+        document.getElementById("clear_substituido").addEventListener("click", () => clearCanvas("sig_substituido"));
+        document.getElementById("clear_autorizador").addEventListener("click", () => clearCanvas("sig_autorizador"));
+        document.getElementById("btn_salvar").addEventListener("click", salvarParcial);
+        document.getElementById("btn_gerar").addEventListener("click", processarPermuta);
+        document.getElementById("btn_copiar").addEventListener("click", copiarLinkAtual);
+        document.getElementById("signature_modal_clear").addEventListener("click", limparAssinaturaModal);
+        document.getElementById("signature_modal_cancel").addEventListener("click", fecharModalAssinatura);
+        document.getElementById("signature_modal_save").addEventListener("click", salvarAssinaturaModal);
+        setupModalCanvas();
+        window.addEventListener("resize", redimensionarAssinaturas);
+        window.visualViewport?.addEventListener("resize", ajustarViewportAssinatura);
+        window.visualViewport?.addEventListener("scroll", ajustarViewportAssinatura);
+        document.addEventListener("touchmove", bloquearRolagemDuranteAssinatura, { passive: false });
+
+        await carregarEstadoInicial();
+    }
+
+    function isSupabaseConfigured() {
+        return SUPABASE_URL.startsWith("https://")
+            && !SUPABASE_URL.includes("SEU_PROJETO")
+            && SUPABASE_KEY
+            && SUPABASE_KEY !== "SUA_CHAVE_ANON_PUBLIC";
+    }
+
+    function verificarAmbiente() {
+        if (window.location.protocol === "file:") {
+            setStatus("warn", "Abra o formulário por um servidor local ou pelo site publicado; o navegador bloqueia o carregamento do PDF em arquivo local.");
+        }
+    }
+
+    async function carregarEstadoInicial() {
+        const params = new URLSearchParams(window.location.search);
+        const netlifyDraftId = obterIdRascunhoCurto(params);
+        const draftPath = params.get("draft");
+        const compactState = params.get(STATE_PARAM) || params.get("state");
+        let faseCarregada = params.get("fase");
+
+        if (netlifyDraftId) {
+            faseCarregada = await carregarRascunhoNetlify(netlifyDraftId) || faseCarregada;
+        } else if (draftPath) {
+            faseCarregada = await carregarRascunho(draftPath) || faseCarregada;
+        } else if (compactState) {
+            faseCarregada = await carregarEstadoCompactado(compactState) || faseCarregada;
+        } else {
+            await carregarQueryStrings(params);
+        }
+
+        currentPhase = normalizarFase(faseCarregada);
+        aplicarBloqueioPorFase(currentPhase);
+        atualizarFase();
+    }
+
+    async function carregarQueryStrings(params) {
+        FIELD_IDS.forEach((fieldId) => {
+            const value = getParamValue(params, PARAM_ALIASES[fieldId] || [fieldId]);
+            if (value !== null) {
+                setFieldValue(fieldId, value);
+            }
+        });
+
+        await Promise.all(CANVAS_IDS.map((canvasId) => {
+            const value = getParamValue(params, SIGNATURE_PARAM_ALIASES[canvasId] || [canvasId]);
+            return value ? desenharAssinaturaSalva(canvasId, value, true) : Promise.resolve();
+        }));
+    }
+
+    function obterIdRascunhoCurto(params) {
+        const byParam = params.get("id") || params.get("r");
+        if (byParam) return byParam;
+
+        const path = window.location.pathname;
+        if (!path.startsWith(SHORT_DRAFT_PREFIX)) return null;
+
+        return decodeURIComponent(path.slice(SHORT_DRAFT_PREFIX.length).split("/")[0] || "");
+    }
+
+    async function carregarRascunhoNetlify(id) {
+        try {
+            const response = await fetch(`${NETLIFY_DRAFT_ENDPOINT}?id=${encodeURIComponent(id)}`, {
+                headers: { accept: "application/json" },
+            });
+
+            if (!response.ok) {
+                throw new Error("Rascunho não encontrado.");
+            }
+
+            const payload = await response.json();
+            preencherCampos(payload.campos || {});
+
+            if (Array.isArray(payload.assinaturas)) {
+                await Promise.all(CANVAS_IDS.map((canvasId, index) => {
+                    const assinatura = payload.assinaturas[index];
+                    if (!assinatura) return Promise.resolve();
+
+                    if (assinatura.s) {
+                        if (!assinatura.s.length) return Promise.resolve();
+                        desenharAssinaturaCompacta(canvasId, assinatura.s, true, assinatura.r || SIGNATURE_COORD_SCALE);
+                        return Promise.resolve();
+                    }
+
+                    return desenharAssinaturaSalva(canvasId, assinatura, true);
+                }));
+            }
+
+            setStatus("ok", "Rascunho carregado.");
+            return payload.fase || null;
+        } catch (err) {
+            setStatus("warn", err.message);
+            return null;
+        }
+    }
+
+    async function carregarEstadoCompactado(compactState) {
+        try {
+            const parts = compactState.split(".");
+            if (parts[0] !== COMPACT_STATE_VERSION) {
+                return carregarEstadoCompactadoJson(compactState);
+            }
+
+            const fase = PHASE_BY_CODE[parts[1]] || null;
+            const fieldStart = 2;
+            const signatureStart = fieldStart + FIELD_IDS.length;
+
+            FIELD_IDS.forEach((fieldId, index) => {
+                const value = base64UrlDecode(parts[fieldStart + index] || "");
+                setFieldValue(fieldId, value);
+            });
+
+            await Promise.all(CANVAS_IDS.map((canvasId, index) => {
+                const encoded = parts[signatureStart + index] || "";
+                if (!encoded) return Promise.resolve();
+                const strokes = decodificarTracosAssinatura(encoded);
+                desenharAssinaturaCompacta(canvasId, strokes, true, SIGNATURE_COORD_SCALE);
+                return Promise.resolve();
+            }));
+
+            return fase;
+        } catch (err) {
+            setStatus("warn", `Não foi possível carregar os dados do link: ${err.message}`);
+            return null;
+        }
+    }
+
+    async function carregarEstadoCompactadoJson(compactState) {
+        const payload = JSON.parse(base64UrlDecode(compactState));
+        preencherCampos(Array.isArray(payload.c) ? camposArrayParaObjeto(payload.c) : payload.campos || {});
+
+        if (Array.isArray(payload.s)) {
+            await Promise.all(CANVAS_IDS.map((canvasId, index) => {
+                const value = payload.s[index];
+                return value ? desenharAssinaturaSalva(canvasId, value, true) : Promise.resolve();
+            }));
+        }
+
+        return payload.f || payload.fase || null;
+    }
+
+    function getParamValue(params, names) {
+        for (const name of names) {
+            const value = params.get(name);
+            if (value !== null) return value;
+        }
+        return null;
+    }
+
+    function getFieldValue(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) return field.value.trim();
+
+        const checked = document.querySelector(`input[name="${fieldId}"]:checked`);
+        return checked ? checked.value : "";
+    }
+
+    function setFieldValue(fieldId, value) {
+        const normalizedValue = normalizarValorCampo(fieldId, value);
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = normalizedValue;
+            return;
+        }
+
+        document.querySelectorAll(`input[name="${fieldId}"]`).forEach((radio) => {
+            radio.checked = radio.value === normalizedValue;
+        });
+    }
+
+    function normalizarValorCampo(fieldId, value) {
+        return FIELD_VALUE_ALIASES[fieldId]?.[value] || value;
+    }
+
+    function setFieldDisabled(fieldId, disabled) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.disabled = disabled;
+            return;
+        }
+
+        document.querySelectorAll(`input[name="${fieldId}"]`).forEach((radio) => {
+            radio.disabled = disabled;
+        });
+    }
+
+    async function carregarRascunho(draftPath) {
+        if (!supabaseClient) {
+            setStatus("warn", "Configure o Supabase para carregar rascunhos com assinatura.");
+            return null;
+        }
+
+        try {
+            const { data } = supabaseClient.storage.from(SUPABASE_BUCKET).getPublicUrl(draftPath);
+            const response = await fetch(data.publicUrl);
+
+            if (!response.ok) {
+                throw new Error("Rascunho não encontrado.");
+            }
+
+            const payload = await response.json();
+            preencherCampos(payload.campos || {});
+
+            if (payload.assinaturas) {
+                await Promise.all([
+                    desenharAssinaturaSalva("sig_solicitante", payload.assinaturas.solicitante, true),
+                    desenharAssinaturaSalva("sig_substituido", payload.assinaturas.substituido, true),
+                    desenharAssinaturaSalva("sig_autorizador", payload.assinaturas.autorizador, true),
+                ]);
+            }
+
+            setStatus("ok", "Rascunho carregado.");
+            return payload.fase || null;
+        } catch (err) {
+            setStatus("warn", err.message);
+            return null;
+        }
+    }
+
+    function preencherCampos(campos) {
+        FIELD_IDS.forEach((fieldId) => {
+            if (campos[fieldId] !== undefined && campos[fieldId] !== null) {
+                setFieldValue(fieldId, campos[fieldId]);
+            }
+        });
+    }
+
+    function camposArrayParaObjeto(values) {
+        return FIELD_IDS.reduce((acc, fieldId, index) => {
+            acc[fieldId] = values[index] || "";
+            return acc;
+        }, {});
+    }
+
+    function normalizarFase(fase) {
+        if (fase === PHASES.substituido || fase === PHASES.autorizador) return fase;
+        return PHASES.solicitante;
+    }
+
+    function aplicarBloqueioPorFase(_fase) {
+        ["documento", "solicitante", "substituido", "autorizador"].forEach((grupo) => {
+            bloquearGrupo(grupo);
+        });
+    }
+
+    function bloquearGrupo(grupo) {
+        const section = document.getElementById(`section_${grupo}`);
+        section.classList.remove("locked");
+
+        const inputIds = {
+            documento: ["data_documento"],
+            solicitante: [
+                "nome_solicitante",
+                "mat_solicitante",
+                "data_solicitante",
+                "guarnicao_solicitante",
+                "turno_solicitante",
+            ],
+            substituido: [
+                "nome_substituido",
+                "mat_substituido",
+                "data_substituido",
+                "guarnicao_substituido",
+                "turno_substituido",
+            ],
+            autorizador: [],
+        }[grupo];
+
+        inputIds.forEach((id) => {
+            setFieldDisabled(id, false);
+        });
+
+        const canvasId = `sig_${grupo}`;
+        const clearId = `clear_${grupo}`;
+        const canvas = document.getElementById(canvasId);
+        const clearButton = document.getElementById(clearId);
+
+        if (!canvas) return;
+
+        const signatureLocked = canvas.dataset.signatureLocked === "true";
+        canvas.dataset.locked = signatureLocked ? "true" : "false";
+        canvas.classList.toggle("locked", signatureLocked);
+        canvas.closest(".canvas-container").classList.toggle("locked", signatureLocked);
+
+        if (clearButton) {
+            clearButton.disabled = signatureLocked;
+        }
+    }
+
+    function atualizarFase() {
+        document.getElementById("phase_badge").textContent = PHASE_LABELS[currentPhase];
+    }
+
+    function setupCanvas(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const container = canvas.closest(".canvas-container");
+
+        signatureStrokes[canvasId] = [];
+        signatureStrokeScales[canvasId] = SIGNATURE_COORD_SCALE;
+        redimensionarCanvas(canvas);
+        renderAssinatura(canvasId);
+
+        container.addEventListener("click", () => abrirModalAssinatura(canvasId));
+        container.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            abrirModalAssinatura(canvasId);
+        });
+    }
+
+    function setupModalCanvas() {
+        const canvas = document.getElementById("signature_modal_canvas");
+
+        canvas.addEventListener("pointerdown", iniciarDesenhoModal);
+        canvas.addEventListener("pointermove", moverDesenhoModal);
+        canvas.addEventListener("pointerup", finalizarDesenhoModal);
+        canvas.addEventListener("pointercancel", finalizarDesenhoModal);
+    }
+
+    function redimensionarAssinaturas() {
+        CANVAS_IDS.forEach((canvasId) => {
+            const canvas = document.getElementById(canvasId);
+            redimensionarCanvas(canvas);
+            renderAssinatura(canvasId);
+        });
+
+        const modal = document.getElementById("signature_modal");
+        if (!modal.classList.contains("hidden")) {
+            const modalCanvas = document.getElementById("signature_modal_canvas");
+            redimensionarCanvas(modalCanvas);
+            renderModalAssinatura();
+        }
+    }
+
+    function redimensionarCanvas(canvas) {
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(1, Math.round(rect.width || canvas.clientWidth || canvas.offsetWidth || 320));
+        const height = Math.max(1, Math.round(rect.height || canvas.clientHeight || canvas.offsetHeight || 150));
+
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        prepararContextoAssinatura(ctx, canvas.id === "signature_modal_canvas" ? 2.6 : 2);
+    }
+
+    function prepararContextoAssinatura(ctx, lineWidth) {
+        ctx.strokeStyle = SIGNATURE_INK;
+        ctx.fillStyle = SIGNATURE_INK;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+    }
+
+    async function abrirModalAssinatura(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas.dataset.locked === "true") return;
+
+        activeSignatureCanvasId = canvasId;
+        modalSignatureStrokes = cloneStrokes(signatureStrokes[canvasId] || []);
+        modalCurrentStroke = [];
+        modalDrawing = false;
+
+        document.getElementById("signature_modal_title").textContent = SIGNATURE_LABELS[canvasId] || "Assinatura";
+        const modal = document.getElementById("signature_modal");
+        savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        document.body.style.top = `-${savedScrollY}px`;
+        modal.classList.remove("hidden");
+        document.body.classList.add("signature-modal-open");
+        ajustarViewportAssinatura();
+
+        await ativarTelaCheiaPaisagem(modal);
+
+        requestAnimationFrame(() => {
+            ajustarViewportAssinatura();
+            const modalCanvas = document.getElementById("signature_modal_canvas");
+            redimensionarCanvas(modalCanvas);
+            renderModalAssinatura();
+        });
+    }
+
+    async function ativarTelaCheiaPaisagem(modal) {
+        try {
+            if (modal.requestFullscreen && !document.fullscreenElement) {
+                await modal.requestFullscreen();
+            }
+        } catch (_err) {
+            // Alguns navegadores móveis só permitem tela cheia após gestos específicos.
+        }
+
+        try {
+            if (screen.orientation?.lock) {
+                await screen.orientation.lock("landscape");
+            }
+        } catch (_err) {
+            // iOS e alguns navegadores ignoram o bloqueio de orientação.
+        }
+    }
+
+    async function fecharModalAssinatura() {
+        const modal = document.getElementById("signature_modal");
+        modal.classList.add("hidden");
+        document.body.classList.remove("signature-modal-open");
+        document.body.style.top = "";
+        window.scrollTo(0, savedScrollY);
+        activeSignatureCanvasId = null;
+        modalSignatureStrokes = [];
+        modalCurrentStroke = [];
+        modalDrawing = false;
+
+        try {
+            if (screen.orientation?.unlock) screen.orientation.unlock();
+        } catch (_err) {
+            // Sem efeito em navegadores que não suportam desbloqueio.
+        }
+
+        try {
+            if (document.fullscreenElement === modal) await document.exitFullscreen();
+        } catch (_err) {
+            // A saída de tela cheia pode falhar se o navegador já tiver encerrado o modo.
+        }
+    }
+
+    function ajustarViewportAssinatura() {
+        const modal = document.getElementById("signature_modal");
+        if (!modal || modal.classList.contains("hidden")) return;
+
+        const viewport = window.visualViewport;
+        const width = Math.round(viewport?.width || window.innerWidth);
+        const height = Math.round(viewport?.height || window.innerHeight);
+
+        modal.style.setProperty("--signature-vw", `${width}px`);
+        modal.style.setProperty("--signature-vh", `${height}px`);
+        modal.style.left = `${Math.round(viewport?.offsetLeft || 0)}px`;
+        modal.style.top = `${Math.round(viewport?.offsetTop || 0)}px`;
+        modal.classList.toggle("is-portrait", height > width);
+
+        requestAnimationFrame(() => {
+            const modalCanvas = document.getElementById("signature_modal_canvas");
+            redimensionarCanvas(modalCanvas);
+            renderModalAssinatura();
+        });
+    }
+
+    function bloquearRolagemDuranteAssinatura(event) {
+        const modal = document.getElementById("signature_modal");
+        if (!modal || modal.classList.contains("hidden")) return;
+        event.preventDefault();
+    }
+
+    function salvarAssinaturaModal() {
+        if (!activeSignatureCanvasId) return;
+
+        const canvas = document.getElementById(activeSignatureCanvasId);
+        signatureStrokes[activeSignatureCanvasId] = cloneStrokes(modalSignatureStrokes);
+        signatureStrokeScales[activeSignatureCanvasId] = SIGNATURE_COORD_SCALE;
+        canvas.dataset.signatureLocked = "false";
+        renderAssinatura(activeSignatureCanvasId);
+        fecharModalAssinatura();
+    }
+
+    function limparAssinaturaModal() {
+        modalSignatureStrokes = [];
+        modalCurrentStroke = [];
+        renderModalAssinatura();
+    }
+
+    function iniciarDesenhoModal(event) {
+        if (!activeSignatureCanvasId) return;
+
+        event.preventDefault();
+        const canvas = document.getElementById("signature_modal_canvas");
+        canvas.setPointerCapture?.(event.pointerId);
+        modalDrawing = true;
+        modalCurrentStroke = [];
+        adicionarPontosDoEvento(event);
+        renderModalAssinatura();
+    }
+
+    function moverDesenhoModal(event) {
+        if (!modalDrawing) return;
+
+        event.preventDefault();
+        adicionarPontosDoEvento(event);
+        renderModalAssinatura();
+    }
+
+    function finalizarDesenhoModal(event) {
+        if (!modalDrawing) return;
+
+        event.preventDefault();
+        const canvas = document.getElementById("signature_modal_canvas");
+        canvas.releasePointerCapture?.(event.pointerId);
+
+        if (modalCurrentStroke.length) {
+            modalSignatureStrokes.push(modalCurrentStroke);
+        }
+
+        modalDrawing = false;
+        modalCurrentStroke = [];
+        renderModalAssinatura();
+    }
+
+    function adicionarPontosDoEvento(event) {
+        const canvas = document.getElementById("signature_modal_canvas");
+        const events = typeof event.getCoalescedEvents === "function"
+            ? event.getCoalescedEvents()
+            : [event];
+
+        events.forEach((pointerEvent) => {
+            const point = getCanvasPoint(canvas, pointerEvent);
+            adicionarPontoAssinatura(canvas, modalCurrentStroke, point);
+        });
+    }
+
+    function getCanvasPoint(canvas, event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: Math.min(Math.max(event.clientX - rect.left, 0), rect.width),
+            y: Math.min(Math.max(event.clientY - rect.top, 0), rect.height),
+        };
+    }
+
+    function clearCanvas(canvasId, force = false) {
+        const canvas = document.getElementById(canvasId);
+        if (!force && canvas.dataset.signatureLocked === "true") return;
+
+        canvas.dataset.signatureLocked = "false";
+        signatureStrokes[canvasId] = [];
+        signatureStrokeScales[canvasId] = SIGNATURE_COORD_SCALE;
+        renderAssinatura(canvasId);
+    }
+
+    function normalizarPontoAssinatura(canvas, point, scale = SIGNATURE_COORD_SCALE) {
+        const size = getCanvasLogicalSize(canvas);
+        return [
+            Math.round((point.x / size.width) * scale),
+            Math.round((point.y / size.height) * scale),
+        ];
+    }
+
+    function adicionarPontoAssinatura(canvas, stroke, point) {
+        const normalized = normalizarPontoAssinatura(canvas, point);
+        const last = stroke[stroke.length - 1];
+        const distance = last
+            ? Math.hypot(normalized[0] - last[0], normalized[1] - last[1])
+            : Infinity;
+
+        if (distance >= SIGNATURE_MIN_DISTANCE) {
+            stroke.push(normalized);
+        }
+    }
+
+    function denormalizarPontoAssinatura(canvas, point, scale = SIGNATURE_COORD_SCALE) {
+        const size = getCanvasLogicalSize(canvas);
+        return {
+            x: (point[0] / scale) * size.width,
+            y: (point[1] / scale) * size.height,
+        };
+    }
+
+    function getCanvasLogicalSize(canvas) {
+        if (canvas.clientWidth && canvas.clientHeight) {
+            return {
+                width: canvas.clientWidth,
+                height: canvas.clientHeight,
+            };
+        }
+
+        return {
+            width: canvas.width,
+            height: canvas.height,
+        };
+    }
+
+    function renderAssinatura(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const strokes = signatureStrokes[canvasId] || [];
+        const scale = signatureStrokeScales[canvasId] || SIGNATURE_COORD_SCALE;
+
+        limparCanvasVisual(canvas);
+        renderTracosAssinatura(canvas, strokes, scale, 2);
+        atualizarEstadoVisualAssinatura(canvasId);
+    }
+
+    function renderModalAssinatura() {
+        const canvas = document.getElementById("signature_modal_canvas");
+        const strokes = modalCurrentStroke.length
+            ? [...modalSignatureStrokes, modalCurrentStroke]
+            : modalSignatureStrokes;
+
+        limparCanvasVisual(canvas);
+        renderTracosAssinatura(canvas, strokes, SIGNATURE_COORD_SCALE, 2.6);
+    }
+
+    function limparCanvasVisual(canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+
+    function renderTracosAssinatura(canvas, strokes, scale, lineWidth) {
+        const ctx = canvas.getContext("2d");
+        const size = getCanvasLogicalSize(canvas);
+        prepararContextoAssinatura(ctx, lineWidth);
+
+        strokes.forEach((stroke) => {
+            if (!stroke.length) return;
+
+            const points = stroke.map((point) => ({
+                x: (point[0] / scale) * size.width,
+                y: (point[1] / scale) * size.height,
+            }));
+
+            if (points.length === 1) {
+                ctx.beginPath();
+                ctx.arc(points[0].x, points[0].y, Math.max(1.4, lineWidth / 2), 0, Math.PI * 2);
+                ctx.fill();
+                return;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+
+            for (let i = 1; i < points.length - 1; i += 1) {
+                const current = points[i];
+                const next = points[i + 1];
+                const mid = {
+                    x: (current.x + next.x) / 2,
+                    y: (current.y + next.y) / 2,
+                };
+                ctx.quadraticCurveTo(current.x, current.y, mid.x, mid.y);
+            }
+
+            const last = points[points.length - 1];
+            ctx.lineTo(last.x, last.y);
+            ctx.stroke();
+        });
+    }
+
+    function atualizarEstadoVisualAssinatura(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const container = canvas.closest(".canvas-container");
+        const locked = canvas.dataset.signatureLocked === "true";
+
+        canvas.dataset.locked = locked ? "true" : "false";
+        canvas.classList.toggle("locked", locked);
+        container.classList.toggle("locked", locked);
+    }
+
+    function isCanvasBlank(canvasId) {
+        const strokes = signatureStrokes[canvasId] || [];
+        if (strokes.length) return false;
+
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext("2d");
+        const pixels = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
+        return !pixels.some((pixel) => pixel !== 0);
+    }
+
+    function canvasDataUrl(canvasId) {
+        return isCanvasBlank(canvasId)
+            ? null
+            : criarAssinaturaAzulDataUrl(canvasId);
+    }
+
+    function criarAssinaturaAzulDataUrl(canvasId) {
+        const strokes = signatureStrokes[canvasId] || [];
+        const tempCanvas = document.createElement("canvas");
+        const tempCtx = tempCanvas.getContext("2d");
+
+        tempCanvas.width = 1200;
+        tempCanvas.height = 360;
+
+        if (strokes.length) {
+            renderTracosAssinatura(
+                tempCanvas,
+                strokes,
+                signatureStrokeScales[canvasId] || SIGNATURE_COORD_SCALE,
+                5
+            );
+            return tempCanvas.toDataURL("image/png");
+        }
+
+        const sourceCanvas = document.getElementById(canvasId);
+        const ink = hexToRgb(SIGNATURE_INK);
+        tempCtx.drawImage(sourceCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            if (imageData.data[i + 3] > 0) {
+                imageData.data[i] = ink.r;
+                imageData.data[i + 1] = ink.g;
+                imageData.data[i + 2] = ink.b;
+            }
+        }
+
+        tempCtx.putImageData(imageData, 0, 0);
+        return tempCanvas.toDataURL("image/png");
+    }
+
+    function hexToRgb(hex) {
+        const value = hex.replace("#", "");
+        return {
+            r: parseInt(value.slice(0, 2), 16),
+            g: parseInt(value.slice(2, 4), 16),
+            b: parseInt(value.slice(4, 6), 16),
+        };
+    }
+
+    function compactarAssinatura(canvasId) {
+        const strokes = signatureStrokes[canvasId] || [];
+        if (!strokes.length) return null;
+
+        return base64UrlEncode(JSON.stringify({
+            v: 2,
+            r: signatureStrokeScales[canvasId] || SIGNATURE_COORD_SCALE,
+            s: strokes,
+        }));
+    }
+
+    function codificarTracosAssinatura(canvasId) {
+        const strokes = signatureStrokes[canvasId] || [];
+        if (!strokes.length) return "";
+
+        return strokes
+            .map((stroke) => stroke
+                .map(([x, y]) => `${x.toString(36)}_${y.toString(36)}`)
+                .join("-"))
+            .join("~");
+    }
+
+    function decodificarTracosAssinatura(encoded) {
+        if (!encoded) return [];
+
+        return encoded.split("~").filter(Boolean).map((stroke) => (
+            stroke.split("-").filter(Boolean).map((point) => {
+                const [x, y] = point.split("_");
+                return [parseInt(x, 36), parseInt(y, 36)];
+            })
+        ));
+    }
+
+    function base64UrlEncode(text) {
+        const bytes = new TextEncoder().encode(text);
+        let binary = "";
+
+        bytes.forEach((byte) => {
+            binary += String.fromCharCode(byte);
+        });
+
+        return btoa(binary)
+            .replaceAll("+", "-")
+            .replaceAll("/", "_")
+            .replaceAll("=", "");
+    }
+
+    function base64UrlDecode(encoded) {
+        const base64 = encoded.replaceAll("-", "+").replaceAll("_", "/");
+        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+        const binary = atob(padded);
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+
+        return new TextDecoder().decode(bytes);
+    }
+
+    function desenharAssinaturaSalva(canvasId, assinatura, lockSignature = false) {
+        if (!assinatura) return Promise.resolve();
+
+        if (!assinatura.startsWith("data:image")) {
+            try {
+                const payload = JSON.parse(base64UrlDecode(assinatura));
+                desenharAssinaturaCompacta(canvasId, payload.s || [], lockSignature, payload.r || LEGACY_SIGNATURE_COORD_SCALE);
+                return Promise.resolve();
+            } catch (_err) {
+                return Promise.reject(new Error("Não foi possível carregar uma assinatura salva."));
+            }
+        }
+
+        return new Promise((resolve, reject) => {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext("2d");
+            const img = new Image();
+
+            img.onload = () => {
+                clearCanvas(canvasId, true);
+                ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
+                canvas.dataset.signatureLocked = lockSignature ? "true" : "false";
+                atualizarEstadoVisualAssinatura(canvasId);
+                resolve();
+            };
+
+            img.onerror = () => reject(new Error("Não foi possível carregar uma assinatura salva."));
+            img.src = assinatura;
+        });
+    }
+
+    function desenharAssinaturaCompacta(canvasId, strokes, lockSignature, scale = LEGACY_SIGNATURE_COORD_SCALE) {
+        const canvas = document.getElementById(canvasId);
+
+        clearCanvas(canvasId, true);
+        signatureStrokes[canvasId] = cloneStrokes(strokes);
+        signatureStrokeScales[canvasId] = scale;
+        canvas.dataset.signatureLocked = lockSignature ? "true" : "false";
+        renderAssinatura(canvasId);
+    }
+
+    function cloneStrokes(strokes) {
+        return strokes.map((stroke) => stroke.map((point) => [point[0], point[1]]));
+    }
+
+    function coletarCampos() {
+        return FIELD_IDS.reduce((acc, fieldId) => {
+            acc[fieldId] = getFieldValue(fieldId);
+            return acc;
+        }, {});
+    }
+
+    function coletarAssinaturas() {
+        return {
+            solicitante: canvasDataUrl("sig_solicitante"),
+            substituido: canvasDataUrl("sig_substituido"),
+            autorizador: canvasDataUrl("sig_autorizador"),
+        };
+    }
+
+    function coletarAssinaturasCompactas() {
+        return {
+            solicitante: compactarAssinatura("sig_solicitante") || canvasDataUrl("sig_solicitante"),
+            substituido: compactarAssinatura("sig_substituido") || canvasDataUrl("sig_substituido"),
+            autorizador: compactarAssinatura("sig_autorizador") || canvasDataUrl("sig_autorizador"),
+        };
+    }
+
+    function formatDateBr(value) {
+        return value ? value.split("-").reverse().join("/") : "";
+    }
+
+    function validarCamposObrigatorios(campos, escopo) {
+        const erros = [];
+
+        if (!campos.data_documento) erros.push("data em Fortaleza");
+        if (!campos.nome_solicitante) erros.push("nome do solicitante");
+        if (!campos.mat_solicitante) erros.push("matrícula do solicitante");
+        if (!campos.data_solicitante) erros.push("data do serviço do solicitante");
+        if (!campos.guarnicao_solicitante) erros.push("guarnição do solicitante");
+        if (!campos.turno_solicitante) erros.push("turno do solicitante");
+
+        if (escopo === PHASES.substituido || escopo === PHASES.autorizador || escopo === "final") {
+            if (!campos.nome_substituido) erros.push("nome do substituído");
+            if (!campos.mat_substituido) erros.push("matrícula do substituído");
+            if (!campos.data_substituido) erros.push("data do serviço do substituído");
+            if (!campos.guarnicao_substituido) erros.push("guarnição do substituído");
+            if (!campos.turno_substituido) erros.push("turno do substituído");
+        }
+
+        return erros;
+    }
+
+    function validarAssinaturas(campos) {
+        const erros = [];
+
+        if (isCanvasBlank("sig_solicitante")) erros.push("assinatura do solicitante");
+        if (isCanvasBlank("sig_substituido")) erros.push("assinatura do substituído");
+
+        return erros;
+    }
+
+    function exibirErros(erros) {
+        alert(`Preencha: ${erros.join(", ")}.`);
+    }
+
+    async function salvarParcial() {
+        const btn = document.getElementById("btn_salvar");
+        const campos = coletarCampos();
+        const nextPhase = currentPhase === PHASES.solicitante ? PHASES.substituido : PHASES.autorizador;
+        const erros = validarCamposObrigatorios(campos, currentPhase);
+
+        if (erros.length) {
+            exibirErros(erros);
+            return;
+        }
+
+        setLoading(btn, true, "Compartilhando...");
+
+        try {
+            const { link, persistente } = await criarLinkCompartilhamento(campos, nextPhase);
+
+            mostrarLinkParcial(link, persistente);
+        } catch (err) {
+            alert(`Erro ao salvar parcial: ${err.message}`);
+        } finally {
+            setLoading(btn, false, "Compartilhar");
+        }
+    }
+
+    async function criarLinkCompartilhamento(campos, nextPhase) {
+        const linkNetlify = await criarLinkComRascunhoNetlify(campos, nextPhase);
+        if (linkNetlify) return { link: linkNetlify, persistente: true };
+
+        if (supabaseClient) {
+            return {
+                link: await criarLinkComRascunho(campos, nextPhase),
+                persistente: true,
+            };
+        }
+
+        return {
+            link: criarLinkComQueryString(campos, nextPhase),
+            persistente: false,
+        };
+    }
+
+    async function criarLinkComRascunhoNetlify(campos, nextPhase) {
+        if (!window.location.protocol.startsWith("http")) return null;
+
+        const payload = {
+            versao: 2,
+            fase: nextPhase,
+            criado_em: new Date().toISOString(),
+            campos,
+            assinaturas: CANVAS_IDS.map((canvasId) => {
+                const strokes = signatureStrokes[canvasId] || [];
+                return strokes.length
+                    ? {
+                        r: signatureStrokeScales[canvasId] || SIGNATURE_COORD_SCALE,
+                        s: cloneStrokes(strokes),
+                    }
+                    : null;
+            }),
+        };
+
+        try {
+            const response = await fetch(NETLIFY_DRAFT_ENDPOINT, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) return null;
+
+            const { id } = await response.json();
+            if (!id) return null;
+
+            return new URL(`${SHORT_DRAFT_PREFIX}${encodeURIComponent(id)}`, obterOrigemCompartilhamento()).toString();
+        } catch (_err) {
+            return null;
+        }
+    }
+
+    async function criarLinkComRascunho(campos, nextPhase) {
+        const payload = {
+            versao: 1,
+            criado_em: new Date().toISOString(),
+            fase: nextPhase,
+            campos,
+            assinaturas: coletarAssinaturas(),
+        };
+
+        const fileName = `rascunhos/permuta_${Date.now()}_${Math.floor(Math.random() * 10000)}.json`;
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        const { error } = await supabaseClient.storage
+            .from(SUPABASE_BUCKET)
+            .upload(fileName, blob, { contentType: "application/json", upsert: false });
+
+        if (error) throw error;
+
+        const url = new URL("/", obterOrigemCompartilhamento());
+        url.searchParams.set("fase", nextPhase);
+        url.searchParams.set("draft", fileName);
+        return url.toString();
+    }
+
+    function criarLinkComQueryString(campos, nextPhase) {
+        const url = new URL("/", obterOrigemCompartilhamento());
+        url.search = `?${STATE_PARAM}=${criarEstadoCompactado(campos, nextPhase)}`;
+        return url.toString();
+    }
+
+    function obterOrigemCompartilhamento() {
+        return window.location.origin.replace(
+            /^https:\/\/[a-z0-9]+--([a-z0-9-]+\.netlify\.app)$/i,
+            "https://$1"
+        );
+    }
+
+    function criarEstadoCompactado(campos, nextPhase) {
+        const fields = FIELD_IDS.map((fieldId) => base64UrlEncode(campos[fieldId] || ""));
+        const signatures = CANVAS_IDS.map(codificarTracosAssinatura);
+
+        return [
+            COMPACT_STATE_VERSION,
+            PHASE_CODES[nextPhase] || PHASE_CODES.solicitante,
+            ...fields,
+            ...signatures,
+        ].join(".");
+    }
+
+    function mostrarLinkParcial(link, incluiAssinaturas) {
+        const detalhe = incluiAssinaturas
+            ? "Link curto criado com dados e assinaturas disponíveis."
+            : "Link criado com dados e assinaturas.";
+
+        configurarShareZone({
+            titulo: "Link parcial pronto",
+            dica: detalhe,
+            link,
+            mostrarDownload: false,
+            mensagemWhatsApp: `Olá! Segue o link para continuar a Permuta de Serviço: ${link}`,
+        });
+    }
+
+    async function processarPermuta() {
+        const btn = document.getElementById("btn_gerar");
+        const campos = coletarCampos();
+        const erros = [
+            ...validarCamposObrigatorios(campos, "final"),
+            ...validarAssinaturas(campos),
+        ];
+
+        if (erros.length) {
+            exibirErros(erros);
+            return;
+        }
+
+        setLoading(btn, true, "Gerando...");
+
+        try {
+            const pdfBytesFinal = await gerarPdf(campos);
+            const publicUrl = supabaseClient
+                ? await uploadPdfFinal(pdfBytesFinal)
+                : criarUrlLocalPdf(pdfBytesFinal);
+
+            const isPublic = Boolean(supabaseClient);
+            configurarShareZone({
+                titulo: isPublic ? "PDF salvo com sucesso" : "PDF gerado no navegador",
+                dica: isPublic
+                    ? "O link público já pode ser compartilhado."
+                    : "Configure o Supabase para gerar um link público permanente.",
+                link: publicUrl,
+                mostrarDownload: true,
+                mensagemWhatsApp: isPublic
+                    ? `Olá! Segue o link da nossa Permuta de Serviço preenchida e assinada: ${publicUrl}`
+                    : "",
+            });
+        } catch (err) {
+            alert(`Erro ao processar o documento: ${err.message}`);
+            console.error(err);
+        } finally {
+            setLoading(btn, false, "Gerar documento");
+        }
+    }
+
+    async function gerarPdf(campos) {
+        const existingPdfBytes = await carregarPdfBase();
+        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        const [firstPage] = pdfDoc.getPages();
+
+        desenharCamposNoPdf(firstPage, campos, boldFont);
+        await desenharAssinaturasNoPdf(pdfDoc, firstPage);
+
+        return pdfDoc.save();
+    }
+
+    async function carregarPdfBase() {
+        const erros = [];
+
+        for (const url of PDF_BASE_URLS) {
+            try {
+                const response = await fetch(url, { cache: "no-store" });
+
+                if (response.ok) {
+                    const bytes = await response.arrayBuffer();
+                    if (isPdfBytes(bytes)) {
+                        return bytes;
+                    }
+
+                    erros.push(`${url}: resposta não é um PDF`);
+                    continue;
+                }
+
+                erros.push(`${url}: HTTP ${response.status}`);
+            } catch (err) {
+                erros.push(`${url}: ${err.message}`);
+            }
+        }
+
+        throw new Error(`Não foi possível carregar o PDF base. Verifique se o arquivo Permuta_de_Servico.pdf está publicado junto com o index.html e se a página foi aberta por http/https. Detalhes: ${erros.join(" | ")}`);
+    }
+
+    function isPdfBytes(bytes) {
+        const header = new TextDecoder("ascii").decode(new Uint8Array(bytes, 0, Math.min(5, bytes.byteLength)));
+        return header === "%PDF-";
+    }
+
+    function desenharCamposNoPdf(page, campos, boldFont) {
+        const dataDocumento = formatDateBr(campos.data_documento);
+        const dataSolicitante = formatDateBr(campos.data_solicitante);
+        const dataSubstituido = formatDateBr(campos.data_substituido);
+
+        drawFortalezaDate(page, dataDocumento, boldFont);
+        drawCenteredBold(page, campos.nome_solicitante.toUpperCase(), PDF_FIELD_BOXES.nome_solicitante, boldFont);
+        drawCenteredBold(page, campos.mat_solicitante, PDF_FIELD_BOXES.mat_solicitante, boldFont);
+        drawCenteredBold(page, dataSolicitante, PDF_FIELD_BOXES.data_solicitante, boldFont);
+        drawCenteredBold(page, campos.nome_substituido.toUpperCase(), PDF_FIELD_BOXES.nome_substituido, boldFont);
+        drawCenteredBold(page, campos.mat_substituido, PDF_FIELD_BOXES.mat_substituido, boldFont);
+        drawCenteredBold(page, dataSubstituido, PDF_FIELD_BOXES.data_substituido, boldFont);
+
+        drawCheckMark(page, campos.guarnicao_solicitante, PDF_CHECK_BOXES.guarnicao_solicitante, boldFont);
+        drawCheckMark(page, campos.turno_solicitante, PDF_CHECK_BOXES.turno_solicitante, boldFont);
+        drawCheckMark(page, campos.guarnicao_substituido, PDF_CHECK_BOXES.guarnicao_substituido, boldFont);
+        drawCheckMark(page, campos.turno_substituido, PDF_CHECK_BOXES.turno_substituido, boldFont);
+    }
+
+    async function desenharAssinaturasNoPdf(pdfDoc, page) {
+        await drawCanvasImage(pdfDoc, page, "sig_solicitante", {
+            x: 80,
+            y: 350,
+            width: 140,
+            height: 45,
+        });
+
+        await drawCanvasImage(pdfDoc, page, "sig_substituido", {
+            x: 360,
+            y: 350,
+            width: 140,
+            height: 45,
+        });
+
+        if (!isCanvasBlank("sig_autorizador")) {
+            await drawCanvasImage(pdfDoc, page, "sig_autorizador", {
+                x: 225,
+                y: 305,
+                width: 150,
+                height: 42,
+            });
+        }
+    }
+
+    async function drawCanvasImage(pdfDoc, page, canvasId, box) {
+        const image = await pdfDoc.embedPng(canvasDataUrl(canvasId));
+        const scaled = scaleBox(page, box);
+        page.drawImage(image, scaled);
+    }
+
+    function drawFortalezaDate(page, dateText, font) {
+        const coverBox = templateBoxToPdfBox(page, { x: 392, y: 268, width: 398, height: 22 });
+        page.drawRectangle({
+            x: coverBox.x,
+            y: coverBox.y,
+            width: coverBox.width,
+            height: coverBox.height,
+            color: PDFLib.rgb(1, 1, 1),
+        });
+
+        const lineY = PDF_FIELD_BOXES.data_documento.y + PDF_FIELD_BOXES.data_documento.height - 1.2;
+        const start = templateTopPointToPdf(page, PDF_FIELD_BOXES.data_documento.x, lineY);
+        const end = templateTopPointToPdf(page, PDF_FIELD_BOXES.data_documento.x + PDF_FIELD_BOXES.data_documento.width, lineY);
+
+        page.drawLine({
+            start,
+            end,
+            thickness: scaleTemplateValueY(page, 0.8),
+            color: PDFLib.rgb(0, 0, 0),
+        });
+
+        drawCenteredBold(page, ".", {
+            x: PDF_FIELD_BOXES.data_documento.x + PDF_FIELD_BOXES.data_documento.width + 5,
+            y: PDF_FIELD_BOXES.data_documento.y,
+            width: 8,
+            height: PDF_FIELD_BOXES.data_documento.height,
+        }, font);
+        drawCenteredBold(page, dateText, PDF_FIELD_BOXES.data_documento, font);
+    }
+
+    function drawCenteredBold(page, rawText, templateBox, font) {
+        const text = limparTextoPdf(rawText);
+        if (!text) return;
+
+        const box = templateBoxToPdfBox(page, templateBox);
+        let fontSize = scaleTemplateValueY(page, templateBox.size || PDF_FIELD_FONT_SIZE);
+        let printable = text;
+
+        while (font.widthOfTextAtSize(printable, fontSize) > box.width && fontSize > scaleTemplateValueY(page, 9)) {
+            fontSize -= 0.5;
+        }
+
+        while (font.widthOfTextAtSize(printable, fontSize) > box.width && printable.length > 4) {
+            printable = `${printable.slice(0, -4)}...`;
+        }
+
+        const textWidth = font.widthOfTextAtSize(printable, fontSize);
+        const textHeight = font.heightAtSize(fontSize);
+
+        page.drawText(printable, {
+            x: box.x + Math.max(0, (box.width - textWidth) / 2),
+            y: box.y + Math.max(0, (box.height - textHeight) / 2),
+            size: fontSize,
+            font,
+        });
+    }
+
+    function drawCheckMark(page, value, boxes, font) {
+        const box = boxes[value];
+        if (!box) return;
+
+        drawCenteredBold(page, "X", { ...box, size: PDF_FIELD_FONT_SIZE }, font);
+    }
+
+    function limparTextoPdf(text) {
+        return String(text || "")
+            .normalize("NFC")
+            .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, "")
+            .trim();
+    }
+
+    function scalePoint(page, x, y) {
+        const { width, height } = page.getSize();
+        return {
+            x: (x / 595.28) * width,
+            y: (y / 841.89) * height,
+        };
+    }
+
+    function scaleBox(page, box) {
+        const point = scalePoint(page, box.x, box.y);
+        return {
+            x: point.x,
+            y: point.y,
+            width: scaleValueX(page, box.width),
+            height: scaleValueY(page, box.height),
+        };
+    }
+
+    function scaleValueX(page, value) {
+        return (value / 595.28) * page.getSize().width;
+    }
+
+    function scaleValueY(page, value) {
+        return (value / 841.89) * page.getSize().height;
+    }
+
+    function scaleTemplatePoint(page, x, y) {
+        const { width, height } = page.getSize();
+        return {
+            x: (x / PDF_TEMPLATE_SIZE.width) * width,
+            y: (y / PDF_TEMPLATE_SIZE.height) * height,
+        };
+    }
+
+    function scaleTemplateValueY(page, value) {
+        return (value / PDF_TEMPLATE_SIZE.height) * page.getSize().height;
+    }
+
+    function templateTopPointToPdf(page, x, y) {
+        const { width, height } = page.getSize();
+        return {
+            x: (x / PDF_TEMPLATE_SIZE.width) * width,
+            y: ((PDF_TEMPLATE_SIZE.height - y) / PDF_TEMPLATE_SIZE.height) * height,
+        };
+    }
+
+    function templateBoxToPdfBox(page, box) {
+        const { width, height } = page.getSize();
+        return {
+            x: (box.x / PDF_TEMPLATE_SIZE.width) * width,
+            y: ((PDF_TEMPLATE_SIZE.height - box.y - box.height) / PDF_TEMPLATE_SIZE.height) * height,
+            width: (box.width / PDF_TEMPLATE_SIZE.width) * width,
+            height: (box.height / PDF_TEMPLATE_SIZE.height) * height,
+        };
+    }
+
+    async function uploadPdfFinal(pdfBytesFinal) {
+        const fileName = `permuta_${Date.now()}_${Math.floor(Math.random() * 10000)}.pdf`;
+        const blob = new Blob([pdfBytesFinal], { type: "application/pdf" });
+        const { error } = await supabaseClient.storage
+            .from(SUPABASE_BUCKET)
+            .upload(fileName, blob, { contentType: "application/pdf", upsert: false });
+
+        if (error) throw error;
+
+        const { data } = supabaseClient.storage.from(SUPABASE_BUCKET).getPublicUrl(fileName);
+        return data.publicUrl;
+    }
+
+    function criarUrlLocalPdf(pdfBytesFinal) {
+        if (lastGeneratedObjectUrl) {
+            URL.revokeObjectURL(lastGeneratedObjectUrl);
+        }
+
+        const blob = new Blob([pdfBytesFinal], { type: "application/pdf" });
+        lastGeneratedObjectUrl = URL.createObjectURL(blob);
+        return lastGeneratedObjectUrl;
+    }
+
+    function configurarShareZone({ titulo, dica, link, mostrarDownload, mensagemWhatsApp }) {
+        const shareZone = document.getElementById("share_zone");
+        const shareUrl = document.getElementById("share_url");
+        const copyBtn = document.getElementById("btn_copiar");
+        const downloadLink = document.getElementById("lnk_download");
+        const whatsappBtn = document.getElementById("btn_whatsapp");
+
+        document.getElementById("share_title").textContent = titulo;
+        document.getElementById("share_hint").textContent = dica;
+
+        shareUrl.value = link;
+        shareUrl.classList.toggle("hidden", !link.startsWith("http"));
+        copyBtn.classList.toggle("hidden", !link.startsWith("http"));
+
+        downloadLink.href = link;
+        downloadLink.textContent = mostrarDownload ? "Abrir PDF" : "Abrir link";
+        downloadLink.classList.toggle("hidden", !mostrarDownload && !link.startsWith("http"));
+
+        if (mensagemWhatsApp) {
+            whatsappBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagemWhatsApp)}`;
+            whatsappBtn.classList.remove("hidden");
+        } else {
+            whatsappBtn.href = "#";
+            whatsappBtn.classList.add("hidden");
+        }
+
+        shareZone.style.display = "block";
+        shareZone.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    async function copiarLinkAtual() {
+        const shareUrl = document.getElementById("share_url");
+        shareUrl.select();
+        shareUrl.setSelectionRange(0, shareUrl.value.length);
+
+        try {
+            await navigator.clipboard.writeText(shareUrl.value);
+            setStatus("ok", "Link copiado.");
+        } catch (_err) {
+            document.execCommand("copy");
+            setStatus("ok", "Link copiado.");
+        }
+    }
+
+    function setStatus(type, message) {
+        const status = document.getElementById("app_status");
+        status.className = `status is-${type}`;
+        status.textContent = message;
+    }
+
+    function setLoading(button, loading, text) {
+        button.disabled = loading;
+        button.textContent = text;
+    }
+</script>
+</body>
+</html>
+
