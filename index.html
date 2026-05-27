@@ -458,7 +458,7 @@
         <input type="text" id="nome_solicitante" autocomplete="name" placeholder="Ex: Fulano de Tal">
 
         <label for="mat_solicitante">Matrícula funcional</label>
-        <input type="text" id="mat_solicitante" inputmode="numeric" placeholder="Ex: 123.456-7">
+        <input type="text" id="mat_solicitante" autocomplete="off" autocapitalize="characters">
 
         <label for="data_solicitante">Data do serviço</label>
         <input type="date" id="data_solicitante">
@@ -508,7 +508,7 @@
         <input type="text" id="nome_substituido" autocomplete="name" placeholder="Ex: Ciclano de Tal">
 
         <label for="mat_substituido">Matrícula funcional</label>
-        <input type="text" id="mat_substituido" inputmode="numeric" placeholder="Ex: 765.432-1">
+        <input type="text" id="mat_substituido" autocomplete="off" autocapitalize="characters">
 
         <label for="data_substituido">Data do serviço</label>
         <input type="date" id="data_substituido">
@@ -1885,23 +1885,23 @@
 
     async function desenharAssinaturasNoPdf(pdfDoc, page) {
         await drawCanvasImage(pdfDoc, page, "sig_solicitante", {
-            x: 80,
-            y: 350,
+            x: 64,
+            y: 342,
             width: 140,
             height: 45,
         });
 
         await drawCanvasImage(pdfDoc, page, "sig_substituido", {
-            x: 360,
-            y: 350,
+            x: 391,
+            y: 342,
             width: 140,
             height: 45,
         });
 
         if (!isCanvasBlank("sig_autorizador")) {
             await drawCanvasImage(pdfDoc, page, "sig_autorizador", {
-                x: 225,
-                y: 305,
+                x: 223,
+                y: 292,
                 width: 150,
                 height: 42,
             });
