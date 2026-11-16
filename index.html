@@ -159,6 +159,10 @@
             margin-top: 6px;
         }
 
+        .choice-grid-four {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
         .choice {
             display: flex;
             align-items: center;
@@ -464,7 +468,7 @@
         <input type="date" id="data_solicitante">
 
         <div class="field-label">Guarnição</div>
-        <div class="choice-grid" role="radiogroup" aria-label="Guarnição">
+        <div class="choice-grid choice-grid-four" role="radiogroup" aria-label="Guarnição">
             <label class="choice">
                 <input type="radio" name="guarnicao_solicitante" value="guarda">
                 <span>Guarda</span>
@@ -476,6 +480,10 @@
             <label class="choice">
                 <input type="radio" name="guarnicao_solicitante" value="salvamento05">
                 <span>Salvamento 05</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_solicitante" value="salvamento06">
+                <span>Salvamento 06</span>
             </label>
         </div>
 
@@ -514,7 +522,7 @@
         <input type="date" id="data_substituido">
 
         <div class="field-label">Guarnição</div>
-        <div class="choice-grid" role="radiogroup" aria-label="Guarnição">
+        <div class="choice-grid choice-grid-four" role="radiogroup" aria-label="Guarnição">
             <label class="choice">
                 <input type="radio" name="guarnicao_substituido" value="guarda">
                 <span>Guarda</span>
@@ -526,6 +534,10 @@
             <label class="choice">
                 <input type="radio" name="guarnicao_substituido" value="salvamento05">
                 <span>Salvamento 05</span>
+            </label>
+            <label class="choice">
+                <input type="radio" name="guarnicao_substituido" value="salvamento06">
+                <span>Salvamento 06</span>
             </label>
         </div>
 
@@ -687,10 +699,14 @@
         guarnicao_solicitante: {
             salvamento1: "salvamento01",
             5: "salvamento05",
+            salvamento6: "salvamento06",
+            6: "salvamento06",
         },
         guarnicao_substituido: {
             salvamento1: "salvamento01",
             5: "salvamento05",
+            salvamento6: "salvamento06",
+            6: "salvamento06",
         },
     };
 
@@ -709,21 +725,23 @@
             guarda: { x: 464, y: 198.8, width: 17, height: 16.5 },
             salvamento01: { x: 578.5, y: 198.8, width: 17, height: 16.5 },
             salvamento05: { x: 609, y: 198.8, width: 21, height: 16.5 },
+            salvamento06: { x: 647, y: 198.8, width: 21, height: 16.5 },
         },
         turno_solicitante: {
-            a: { x: 691, y: 198.8, width: 18, height: 16.5 },
-            b: { x: 723.5, y: 198.8, width: 18, height: 16.5 },
-            "24h": { x: 768, y: 198.8, width: 21, height: 16.5 },
+            a: { x: 729, y: 198.8, width: 18, height: 16.5 },
+            b: { x: 761.5, y: 198.8, width: 18, height: 16.5 },
+            "24h": { x: 806, y: 198.8, width: 21, height: 16.5 },
         },
         guarnicao_substituido: {
             guarda: { x: 156, y: 240.8, width: 17, height: 16.5 },
             salvamento01: { x: 270.5, y: 240.8, width: 17, height: 16.5 },
             salvamento05: { x: 301.5, y: 240.8, width: 21, height: 16.5 },
+            salvamento06: { x: 339.5, y: 240.8, width: 21, height: 16.5 },
         },
         turno_substituido: {
-            a: { x: 383.5, y: 240.8, width: 18, height: 16.5 },
-            b: { x: 416, y: 240.8, width: 18, height: 16.5 },
-            "24h": { x: 460.5, y: 240.8, width: 21, height: 16.5 },
+            a: { x: 421.5, y: 240.8, width: 18, height: 16.5 },
+            b: { x: 454, y: 240.8, width: 18, height: 16.5 },
+            "24h": { x: 498.5, y: 240.8, width: 21, height: 16.5 },
         },
     };
 
